@@ -8,6 +8,9 @@ export class AngryVectors extends GraphicsApp
     private projectile : Projectile;
     private arrow : THREE.Group;
 
+    private arrowPitch : number;
+    private arrowYaw : number;
+
     constructor()
     {
         // Pass in the aspect ratio to the constructor
@@ -18,6 +21,10 @@ export class AngryVectors extends GraphicsApp
         this.inputVector = new THREE.Vector3();
         this.projectile = new Projectile(new THREE.Vector3(0, 0.25, 2), 0.5);
         this.arrow = new THREE.Group();
+
+        // Set the initial arrow direction
+        this.arrowPitch = 20 * Math.PI / 180;
+        this.arrowYaw = 0;
     }
 
     createScene() : void
@@ -78,10 +85,58 @@ export class AngryVectors extends GraphicsApp
     update(deltaTime : number) : void
     {
         // This rotation code doesn't work correctly because of the order of rotations
-        this.arrow.rotateX(90 * Math.PI / 180 * deltaTime * -this.inputVector.y);
-        this.arrow.rotateY(90 * Math.PI / 180 * deltaTime * -this.inputVector.x);
+        //this.arrow.rotateX(90 * Math.PI / 180 * deltaTime * -this.inputVector.y);
+        //this.arrow.rotateY(90 * Math.PI / 180 * deltaTime * -this.inputVector.x);
+
+        this.arrowPitch += 90 * Math.PI / 180 * deltaTime * this.inputVector.y;
+        this.arrowYaw += 90 * Math.PI / 180 * deltaTime * -this.inputVector.x;
+
+        const maxArrowYaw = 90 * Math.PI / 180;
+        const maxArrowPitch = 75 * Math.PI / 180;
+
+        if(this.arrowYaw >= maxArrowYaw)
+            this.arrowYaw = maxArrowYaw;
+        else if(this.arrowYaw <= -maxArrowYaw)
+            this.arrowYaw = -maxArrowYaw;
+
+        if(this.arrowPitch >= maxArrowPitch)
+            this.arrowPitch = maxArrowPitch;
+        else if(this.arrowPitch <= 0)
+            this.arrowPitch = 0;
+
+        var rotationMatrixX = new THREE.Matrix4().makeRotationX(-this.arrowPitch);
+        var rotationMatrixY = new THREE.Matrix4().makeRotationY(this.arrowYaw);
+        this.arrow.setRotationFromMatrix(rotationMatrixY.multiply(rotationMatrixX));
+
+        const scaleSpeed = 1.5;
+        const maxScale = 3;
+        const minScale = 0.1;
+
+        this.arrow.scale.z += this.inputVector.z * scaleSpeed * deltaTime;
+
+        if(this.arrow.scale.z > maxScale)
+            this.arrow.scale.z = maxScale;
+        else if(this.arrow.scale.z < minScale)
+            this.arrow.scale.z = minScale;
+
+        this.projectile.update(deltaTime);
     }
 
+    fire(): void
+    {
+        if(this.projectile.velocity.length() == 0)
+        {
+            const speedMultiplier = 20;
+            var speed = this.arrow.scale.z * speedMultiplier;
+
+            var direction = new THREE.Vector3(0, 0, 1);
+            direction.applyEuler(this.arrow.rotation);
+            direction.normalize();
+
+            this.projectile.velocity.copy(direction);
+            this.projectile.velocity.multiplyScalar(speed);
+        }    
+    }
 
     // Event handler for keyboard input
     // You don't need to modify this function
@@ -99,6 +154,8 @@ export class AngryVectors extends GraphicsApp
             this.inputVector.z = 1;
         else if(event.key == 'ArrowDown')
             this.inputVector.z = -1;
+        else if(event.key == ' ')
+            this.fire();
         else if(event.key == 'r')
             this.projectile.reset();
     }

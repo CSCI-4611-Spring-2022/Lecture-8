@@ -34,6 +34,8 @@ export class Projectile extends THREE.Object3D
 
     public update(deltaTime : number) : void
     {
-       
+       this.position.x += this.velocity.x * deltaTime;
+       this.position.y += this.velocity.y * deltaTime;
+       this.position.z += this.velocity.z * deltaTime;
     }
 }
